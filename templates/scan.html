@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Results</title>
+    <!-- BOOSTSTRAP -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="moz-extension://499d5737-ac3a-4429-8518-0c5289c8d7fa/content/fido2-page-script.js"></script>
+    <!-- STYLE -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">        
+    <!-- ICONO -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon2.ico') }}">
+    <!-- MAPA -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+
+    <script>
+        //BOTONES LATERAL
+            function toggleSection(sectionId) {
+                const section = document.getElementById(sectionId);
+                section.style.display = section.style.display === 'none' 
+                    ? 'block' 
+                    : 'none';
+            }
+
+        //BOTON VIRUS TOTAL
+            function toggleCleanANDUnrated(sectionId, button) {
+                const section = document.getElementById(sectionId);
+                
+                button.textContent = button.textContent === "Show Clean and Unrated Results" 
+                    ? "Hide Clean and Unrated Results" 
+                    : "Show Clean and Unrated Results";
+
+                section.style.display = section.style.display === "none" 
+                    ? "block" 
+                    : "none";
+
+                button.style.backgroundColor = button.style.backgroundColor === "green" 
+                    ? "red" 
+                    : "green";
+                button.style.margin = "10px"; 
+            }
+
+        //MAPA
+            //https://leafletjs.com/reference.html#map-example
+            let map;
+            let marker;
+            //DOMContentLoaded es una funcionalidad que espera a que se cargue la info de la pantalla de html
+            document.addEventListener("DOMContentLoaded", function() {
+                {% if results.ip_location %}
+                // Inicializar el mapa aquí
+                    map = L.map('map').setView([ {{ results.ip_location.lat }}, {{ results.ip_location.lon }} ], 13);
+                    
+                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    }).addTo(map);
+                    marker = L.marker([{{ results.ip_location.lat }}, {{ results.ip_location.lon }}]).addTo(map)
+                        .bindPopup('La localización puede ser inexacta');
+                    
+                    map.invalidateSize(); // Asegura la visualización correcta
+                {% endif %}
+            });
+           
+            //BOTON MAPA
+                function toggleMap(sectionId, button) {
+                    const section = document.getElementById(sectionId);
+                    section.style.display = section.style.display === "none" 
+                        ? "block"
+                        : "none";
+
+                    button.textContent = button.textContent === "Show Map"
+                        ? "Hide Map"
+                        : "Show Map";
+
+                    if (section.style.display === "block") {
+                        map.invalidateSize();
+                        map.setView([{{ results.ip_location.lat }}, {{ results.ip_location.lon }}], 13);
+                        marker.setLatLng([{{ results.ip_location.lat }}, {{ results.ip_location.lon }}]);
+                    }
+                }
+
+        //CAMBIO ICONO WAYBACK
+            function toggleImg(element) {
+                const icon = element.querySelector('i');
+                if (icon.classList.contains('bi-check2')) {
+                    icon.classList.remove('bi-check2');
+                    icon.classList.add('bi-check2-all');
+                } else {
+                    icon.classList.remove('bi-ban');
+                    icon.classList.add('bi-check2-all');
+                }
+            }
+    </script>
+</head>
+<body>
+    <section class="no-scroll">
+        <div class="wrapper">
+            <!--BUTTONS-->
+            <div class="button-container left scroller">
+                {% if results.nmap_results and results.nmap_results | length > 0 %}
+                    <div class="nmap-button" onclick="toggleSection('nmapResults')">
+                {% else %}
+                    <div class="nmap-button" style="background-color: rgb(48, 48, 48); filter: grayscale(100%); cursor: not-allowed">
+                {% endif %}
+                        <strong>NMAP</strong>
+                        <img src="/static/image/nmap.png" alt="Nmap">                        
+                    </div>
+
+                {% if results.vt_data and results.vt_data | length > 0 and results.vt_data.values() | selectattr('result', '!=', 'unrated') | list | length > 0 %}
+                    <div class="virustotal-button" onclick="toggleSection('vtResults')">
+                {% else %}
+                    <div class="virustotal-button" style="background-color: rgb(48, 48, 48); filter: grayscale(100%); cursor: not-allowed">
+                {% endif %}
+                        <strong>VirusTotal</strong>
+                        <img src="/static/image/virustotal.png" alt="VirusTotal">
+                    </div>
+
+                {% if results.ip_location and results.ip_location.status == 'success' %}
+                    <div class="ip-button" onclick="toggleSection('ipLocationResults')">
+                {% else %}
+                    <div class="ip-button" style="background-color: rgb(48, 48, 48); filter: grayscale(100%); cursor: not-allowed">
+                {% endif %}
+                        <strong>IP-Location</strong>
+                        <img src="/static/image/world.png" alt="IP">
+                    </div>
+
+                {% if results.robots_txt and results.robots_txt | length > 0 %}
+                    <div class="robot-button" onclick="toggleSection('robotsResults')">
+                {% else %}
+                    <div class="robot-button" style="background-color: rgb(48, 48, 48); filter: grayscale(100%); cursor: not-allowed">
+                {% endif %}
+                        <strong>Robots_txt</strong>
+                        <img src="/static/image/robots_txt.png" alt="IP">
+                    </div>
+                
+                {% if results.waym_results and results.waym_results | length > 0 %}
+                    <div class="wayback-button" style="color: black" onclick="toggleSection('waybackResults')">
+                {% else %}
+                    <div class="wayback-button" style="background-color: rgb(48, 48, 48); filter: grayscale(100%); cursor: not-allowed">
+                {% endif %}
+                        <strong>Way Back Machine</strong>
+                        <img src="/static/image/waybackmachine.png" alt="Way Back">                        
+                    </div>
+
+                {% if results.nuclei_results and results.nuclei_results | length > 0  %}
+                    <div class="nuclei-button" onclick="toggleSection('nucleiResults')">
+                {% else %}
+                    <div class="nuclei-button" style="background-color: rgb(48, 48, 48); filter: grayscale(100%); cursor: not-allowed">
+                {% endif %}
+                        <strong>Nuclei</strong>
+                        <img src="/static/image/nuclei.png" alt="IP">
+                    </div>
+
+                    <a href="{{ url_for('index') }}" class="volver-button"><strong>Volver</strong></a>
+        
+            </div>
+
+            <!--RESULTS-->
+            <div class="right">
+                <div class="row justify-content-end">
+                    <div>
+                        <h1 class="scanfor">Scan Results for:<br/><a style="text-decoration:none; color: rgb(0, 155, 0 / 1.0);" href="http://{{ target }}" target="_blank">{{ target }}</a></h1>
+                        {% if created_at %}
+                        <h2>Created at {{ created_at }}</h2>
+                        {% endif %}
+                    </div>
+                    <div class="container-user perfil">
+                        <div class="d-flex justify-content-end align-items-center p-3">
+                            <div class="dropdown text-end">
+                                <a class="d-block link-body-emphasis text-decoration-none dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {% if user.profile_picture != "" %}
+                                        <img class="rounded-circle user-image" src="{{user.profile_picture}}">
+                                    {% else %}
+                                        <img class="rounded-circle user-image" src="/static/image/foto_perfil.png">
+                                    {% endif %}
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                                {% if user.name != "Admin"%}
+                                    <li><a class="dropdown-item" href="/account">Account</a></li>
+                                    <li><a class="dropdown-item" href="/results">View Searches</a></li>
+                                    <li><div class="dropdown-divider"></div></li>
+                                    <li><a class="dropdown-item" href="/logout">Log Out</a></li>
+                                {% else %}
+                                    <li><a class="dropdown-item" href="/login">Log-in</a></li>
+                                    <li><div class="dropdown-divider"></div></li>
+                                    <li><a class="dropdown-item" href="/register">Register</a></li>
+                                {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="scroller">
+                    <div id="results" class="all-container">
+                        <!--NMAP-->
+                        <div id="nmapResults" style="display: none;">
+                            {% if results.nmap_results and results.nmap_results.get('scan') %}
+                                {% for ip, details in results.nmap_results['scan'].items() %}
+                                    <p><strong>NMAP for IP Address:</strong> {{ ip }}</p>
+                                    {% if details.get('tcp') %}
+                                        <table class="table table-dark table-striped table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Port</th>
+                                                    <th>State</th>
+                                                    <th>Service</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for port, info in details['tcp'].items() %}
+                                                    <tr>
+                                                        <td>{{ port }}/tcp</td>
+                                                        <td>{{ info['state'] }}</td>
+                                                        <td>{{ info['name'] }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}            
+                        </div>
+
+                        <!--VIRUSTOTAL-->
+                        <div id="vtResults" style="display: none;">
+                            <p><strong>VirusTotal</strong></p>  
+                            {% if results.vt_data and results.vt_data | length > 0 %}
+                                <table class="table table-dark table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>State</th>
+                                            <th>Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td class="malicious">Malicious</td><td class="malicious">{{results.vt_count.malicious}}</td></tr>
+                                        <tr><td class="phishing">Phishing</td><td class="phishing">{{results.vt_count.phishing}}</td></tr>
+                                        <tr><td class="suspicious">Suspicious</td><td class="suspicious">{{results.vt_count.suspicious}}</td></tr>
+                                        <tr><td class="clean">Clean</td><td class="clean">{{results.vt_count.clean}}</td></tr>
+                                        <tr><td class="unrated">Unrated</td><td class="unrated">{{results.vt_count.unrated}}</td></tr>
+                                    </tbody>
+                                </table>
+                                {% for engine_name, details in results.vt_data.items() %}
+                                    {% if details.result == 'malicious' or details.result == 'suspicious' or details.result == 'phishing'%}
+                                        <div class="vt-result {{ details.result }}">
+                                            <strong>{{ engine_name }}</strong>
+                                            <br/>
+                                            <span>{{details.result}}</span>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if results.vt_count.malicious > 0 or results.vt_count.suspicious > 0 %}
+                                    <br/>
+                                {% endif %}
+                                
+                                <button onclick="toggleCleanANDUnrated('virustotalsection', this)" style="--bs-btn-color: white;" class="btn btn-primary" style="background-color: green;">Show Clean and Unrated Results</button>
+                                <br/>
+                                <div id="virustotalsection" style="display: none;">
+                                    {% for engine_name, details in results.vt_data.items() %}
+                                        {% if details.result == 'clean' or details.result == 'unrated' %}
+                                            <div class="vt-result {{ details.result }}">
+                                                <strong>{{ engine_name }}</strong>
+                                                <br/>
+                                                <span>{{ details.result }}</span>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>                            
+                                <br/>
+                            {% endif %}
+                        </div>
+                        
+                        <!--IP-LOCATION-->
+                        <div id="ipLocationResults" style="display: none;">
+                            <p><strong>IP Location</strong></p>
+                            {% if results.ip_location and results.ip_location | length > 0 %}    
+                                <table class="table table-dark table-striped table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>IP</th>
+                                            <th>Country</th>
+                                            <th>City</th>
+                                            <th>Region</th>
+                                            <th>Latitude</th>
+                                            <th>Longitude</th>
+                                            <th>ISP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{ results.ip_location.query }}</td>
+                                            <td>{{ results.ip_location.country }}</td>
+                                            <td>{{ results.ip_location.city }}</td>
+                                            <td>{{ results.ip_location.regionName }}</td>
+                                            <td>{{ results.ip_location.lat }}</td>
+                                            <td>{{ results.ip_location.lon }}</td>
+                                            <td>{{ results.ip_location.isp }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            
+                            <div id="map" style="width: 90%; height: 250px; display: none; margin: 0 auto"></div>
+                            <button id="showMapButton" style="--bs-btn-color: white; margin-bottom: 1%;" class="btn btn-primary" style="margin-top: 7px; margin-bottom: 25px" onclick="toggleMap('map', this);">Show Map</button>
+                            {% endif %}
+                        </div>
+
+                        <!--ROBOTS.TXT-->
+                        <div id="robotsResults" style="display: none;">
+                            <p><strong>Robots.txt Content</strong></p>
+                            <div class="table-container">
+                                <!-- Tabla de Allow -->
+                                 {% if results.robots_txt.allow %}
+                                    <table class="table table-dark table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Allow</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for allow in results.robots_txt.allow %}
+                                                <tr>
+                                                    <td>{{ allow }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% endif %}
+                        
+                                <!-- Tabla de Disallow -->
+                                {% if results.robots_txt.disallow %}
+                                    <table class="table table-dark table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Disallow</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for disallow in results.robots_txt.disallow %}
+                                                <tr>
+                                                    <td>{{ disallow }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    <br/>
+                                {% endif %}
+                            </div>
+                        </div>                      
+
+                        <!--WAY BACK MACHINE-->
+                        <div id="waybackResults" style="display: none;" >
+                            <p><strong>Way Back Machine</strong></p>
+                            {% if results.waym_results and results.waym_results | length > 0 %}
+                                    <table class="table table-dark table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                    <th>Results
+                                                    <i class="bi bi-info-circle info-icon" style="color: white; margin-left: 4px" title="The ✓ is that you can visit the page.&#10;The 🚫 will give error if you enter."></i> <!--&#10 es el \n-->
+                                                    </th>
+                                                </div>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for result in results.waym_results %}
+                                            <tr>
+                                                <td onclick="toggleImg(this)">
+                                                    <a href="https://web.archive.org/web/{{result.url}}" target="_blank">{{ result.url }}</a> 
+                                                    {% if result.status == 200 %}
+                                                        <i class="bi bi-check2"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-ban"></i>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                            {% endif %}
+                        </div>
+
+                        <!--NUCLEI-->
+                        <div id="nucleiResults" style="display: none;">
+                            <p><strong>Nuclei</strong></p>
+                            {% if results.nuclei_results %}
+                                <table class="table table-dark table-striped table-bordered tabla-grande">
+                                    <thead>
+                                        <tr>
+                                            <th>Vulnerability</th>
+                                            <th>Info</th>
+                                            <th>Match</th>
+                                            <th>IP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for result in results.nuclei_results %}
+                                            <tr>
+                                                <td>{{ result.name }}</td>
+                                                <td>{{ result.description }}</td>
+                                                <td>
+                                                    <a href="{% if not result.matched_at.startswith('http') %}http://{{ result.matched_at }}{% else %}{{ result.matched_at }}{% endif %}" target="_blank">
+                                                        {{ result.matched_at }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ result.ip }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% endif %}
+                        </div>
+                        <br/>
+                        {% if user.name != "Admin" %}
+                            <button type="button" class="btn btn-primary" style="--bs-btn-color: white;" data-bs-toggle="modal" data-bs-target="#saveResultsModal">
+                                Save Results
+                            </button>
+
+                            <div class="modal fade" style="align-content: center;" id="saveResultsModal" tabindex="-1" aria-labelledby="saveResultsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog" style="background-color:black">
+                                    <div class="modal-content" >
+                                        <div class="modal-header" style="background-color: black;">
+                                            <h5 class="modal-title" id="saveResultsModalLabel">Save Scan Results</h5>
+                                            <button type="button" class="btn-close" style="background-color: white;" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body" style="background-color: black;">
+                                            <form id="saveResultsForm" action="{{ url_for('save_scan_results') }}" method="POST">
+                                                <input type="hidden" name="target" value="{{ target }}">
+                                                <input type="hidden" name="results" value="{{ results }}">
+                                                <div class="mb-3">
+                                                    <label for="scanName" class="form-label">Name</label>
+                                                    <input type="text" class="urlInput form-control" id="scanName" name="scan_name" required>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer" style="background-color: black">
+                                            <button type="submit" class="btn btn-primary" style="--bs-btn-color: white;" form="saveResultsForm">Save Results</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
