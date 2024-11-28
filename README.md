@@ -30,7 +30,9 @@ La aplicación utiliza las siguientes herramientas para extraer información:
   ```bash
   pip install -r requirements.txt --break-system-packages
   ```
-
+  ```bash
+  apt install nmap
+  ```
 ## Instalación
 
 Si deseas ejecutar la aplicación localmente, sigue estos pasos:
@@ -49,4 +51,3 @@ Si deseas ejecutar la aplicación localmente, sigue estos pasos:
    ```
    
 5. Disfruta de las busquedas# casi_acabado
-# osint_tool
